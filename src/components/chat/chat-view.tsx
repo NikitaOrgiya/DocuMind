@@ -1,0 +1,112 @@
+"use client";
+
+import { AlertTriangle, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useRef, useState, useEffect } from "react";
+import type { ChatMessageRecord } from "@/types/domain";
+import { ChatComposer } from "./chat-composer";
+import { ChatMessageBubble } from "./chat-message";
+import { EmptyState } from "./empty-state";
+
+interface ChatViewProps {
+  sessionId: string | null;
+  initialMessages: ChatMessageRecord[];
+}
+
+interface ChatApiResponse {
+  session: { id: string; title: string };
+  userMessage: ChatMessageRecord;
+  assistantMessage: ChatMessageRecord;
+}
+
+export function ChatView({ sessionId: initialSessionId, initialMessages }: ChatViewProps) {
+  const router = useRouter();
+  const [sessionId, setSessionId] = useState(initialSessionId);
+  const [messages, setMessages] = useState<ChatMessageRecord[]>(initialMessages);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastQuestion, setLastQuestion] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [messages, loading]);
+
+  async function sendQuestion(question: string) {
+    setError(null);
+    setLastQuestion(question);
+    setLoading(true);
+    setInput("");
+
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question, sessionId: sessionId ?? undefined }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? "Unable to generate an answer right now. Please try again.");
+      }
+
+      const payload = data as ChatApiResponse;
+      setMessages((prev) => [...prev, payload.userMessage, payload.assistantMessage]);
+
+      if (!sessionId) {
+        setSessionId(payload.session.id);
+        router.replace(`/app/chat/${payload.session.id}`);
+      }
+      setLastQuestion(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to generate an answer right now.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="flex h-full flex-1 flex-col">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
+        {messages.length === 0 ? (
+          <EmptyState onSelect={sendQuestion} />
+        ) : (
+          <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6">
+            {messages.map((message) => (
+              <ChatMessageBubble key={message.id} message={message} />
+            ))}
+            {loading && (
+              <div className="flex items-center gap-2 text-sm text-neutral-400">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Searching the knowledge base…
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {error && (
+        <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 pb-2">
+          <div className="flex flex-1 items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {error}
+          </div>
+          {lastQuestion && (
+            <button
+              type="button"
+              onClick={() => sendQuestion(lastQuestion)}
+              className="shrink-0 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="mx-auto w-full max-w-3xl">
+        <ChatComposer value={input} onChange={setInput} onSubmit={() => sendQuestion(input)} disabled={loading} />
+      </div>
+    </div>
+  );
+}
