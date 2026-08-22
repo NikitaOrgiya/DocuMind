@@ -58,8 +58,6 @@ export const config = {
   },
 } as const;
 
-/** Must match the dimension baked into supabase/migrations for `vector(N)`. */
-export const EMBEDDING_DIMENSIONS = 1536;
 /**
  * Dimensions used by the deterministic hashed mock embedding (see
  * lib/ai/mock-provider.ts). Large relative to the demo corpus's vocabulary

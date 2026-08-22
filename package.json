@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "ingest": "tsx scripts/ingest/index.ts",
+    "eval:retrieval": "tsx scripts/eval/run-retrieval-eval.ts",
     "eval:rag": "tsx scripts/eval/run-eval.ts",
     "db:start": "supabase start",
     "db:stop": "supabase stop",

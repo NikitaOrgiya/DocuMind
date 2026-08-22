@@ -35,7 +35,7 @@ Next.js App Router (TypeScript, strict)
 │  └─ validation/         Zod schemas at every external boundary
 ├─ scripts/
 │  ├─ ingest/             npm run ingest — populates Supabase/pgvector
-│  └─ eval/               npm run eval:rag — live RAG evaluation
+│  └─ eval/               npm run eval:retrieval (retrieval-only) + npm run eval:rag (full)
 ├─ supabase/migrations/   SQL schema, pgvector index, retrieval RPC
 ├─ docs/sample-corpus/    5 synthetic Markdown documents
 ├─ evals/rag-eval.json    20-case evaluation dataset
@@ -148,6 +148,14 @@ An HNSW index (`vector_cosine_ops`) backs the search. The app layer
 citation labels in similarity order — the database UUID is never exposed
 as a citation.
 
+The real-mode default `RAG_MATCH_THRESHOLD` (0.72) is currently a
+**reasoned default, not a measured one** — calibrating it against real
+`text-embedding-3-small` similarity scores requires `npm run
+eval:retrieval` against a real Supabase project, which hasn't been
+possible in any environment this project has been built/verified in so
+far (see [Local Supabase](#local-supabase)). Run that script and read off
+the threshold sweep table before trusting 0.72 in a real deployment.
+
 ## Grounding strategy
 
 [src/lib/rag/pipeline.ts](src/lib/rag/pipeline.ts) is the single entry
@@ -232,14 +240,34 @@ with no external services at all.
 npm run db:start   # supabase start (requires Docker)
 ```
 
-This project was built in an environment **without Docker available**, so
-the local Supabase stack could not actually be started or verified during
-development — this is a documented, environment-specific blocker, not a
-gap in the schema or app code. The migration in
-`supabase/migrations/0001_init.sql` is ready to apply either locally
-(`supabase start` + `supabase db reset`, or automatically on `supabase
-start`) or against a real Supabase project (`supabase link` + `supabase db
-push`, or pasting the SQL into the Supabase SQL editor).
+This project was built and has twice been verified in an environment with
+**Docker not installed at all** (no `docker` command, no Docker Desktop
+under `C:\Program Files`, no WSL2 distribution registered) — confirmed by
+directly checking, not assumed. So the local Supabase stack has never
+actually been started or verified against a real database; this is a
+documented, environment-specific blocker, not a gap in the schema or app
+code. The migration in `supabase/migrations/0001_init.sql` is ready to
+apply either locally (`supabase start` + `supabase db reset`, or
+automatically on `supabase start`) or against a real Supabase project
+(`supabase link` + `supabase db push`, or pasting the SQL into the
+Supabase SQL editor).
+
+Once Docker (with the WSL2 backend, on Windows) is installed, the full
+real pipeline can be brought up with:
+
+```powershell
+cd C:\projects\DocuMind
+npx supabase init          # only if supabase/config.toml doesn't exist yet
+npx supabase start
+npx supabase db reset      # applies supabase/migrations/0001_init.sql
+npx supabase status        # copy the local API URL + service_role/anon keys
+copy .env.example .env.local
+# paste the local Supabase URL/keys and a real OPENAI_API_KEY into .env.local
+npm run ingest
+npm run eval:retrieval     # cheap: embeddings + pgvector only, no chat completions
+npm run eval:rag           # full: adds real chat generation + citation check
+npm run dev
+```
 
 ## Ingestion command
 
@@ -281,19 +309,39 @@ coverage — see `tests/`.
 
 ## RAG evaluation
 
-```bash
-npm run eval:rag
-```
+This is a local evaluation/regression dataset for this portfolio project,
+not a scientific benchmark — 20 hand-written cases against a 5-document
+corpus. Treat any numbers from it as a measured local baseline, not a
+general accuracy claim.
 
 `evals/rag-eval.json` has 20 cases: 8 direct, 4 paraphrased, 3
 cross-document/cross-section, 3 out-of-scope, 1 false-premise, and 1
-prompt-injection case. `scripts/eval/run-eval.ts` runs each through the
-**real** OpenAI + Supabase pipeline and reports retrieval hits, refusal
-correctness, and citation integrity as PASS/FAIL per case. It is
-deliberately not part of `npm run test` — it costs real API calls and
-needs real credentials. Without `NEXT_PUBLIC_SUPABASE_URL`,
-`SUPABASE_SERVICE_ROLE_KEY`, and `OPENAI_API_KEY`, it prints `SKIPPED —
-missing external credentials` and exits 0, rather than faking a result.
+prompt-injection case. Both scripts below need real credentials and print
+`SKIPPED — missing external credentials` (exit 0, never a faked pass)
+without them — as of this writing that is their actual status in this
+environment; see the build reports for exact command results.
+
+```bash
+npm run eval:retrieval   # embeddings + pgvector only — no chat-completion calls
+```
+
+`scripts/eval/run-retrieval-eval.ts` embeds each question, queries
+`search_document_chunks` unfiltered (`match_threshold=0`, top 10) so the
+real similarity distribution is visible, and reports Top-1/Top-3/Top-5 hit
+rate on the answerable cases plus a threshold-sweep table (candidate
+thresholds from 0.5–0.85) showing the recall/false-positive tradeoff at
+each one. This is the intended way to calibrate `RAG_MATCH_THRESHOLD` from
+real numbers instead of guessing — it does not call the chat model, so
+it's cheap to re-run.
+
+```bash
+npm run eval:rag         # adds real chat generation + citation validation
+```
+
+`scripts/eval/run-eval.ts` runs each case through the full real OpenAI +
+Supabase pipeline (embedding → retrieval → generation → citation
+validation) and reports retrieval hits, refusal correctness, and citation
+integrity as PASS/FAIL per case.
 
 ## Local demo mode
 
@@ -334,7 +382,7 @@ silently degrades a real deployment; see `useMock` in
 ## Known limitations
 
 **Critical before a portfolio demo:**
-- No live Supabase/OpenAI verification was performed in this environment — no Docker for local Supabase, and no API credentials were provided. See [Verification](#verification) in the build report for exactly what was and wasn't run.
+- No live Supabase/OpenAI verification has been possible in any environment this project has been built in so far — Docker is confirmed not installed (checked directly, twice), and no API credentials have been provided. `RAG_MATCH_THRESHOLD` is therefore still a reasoned default, not a measured one. See the build reports for exactly what was and wasn't run each session.
 
 **Recommended later:**
 - The mock embedding is lexical, not semantic — expect it to under-perform on heavy paraphrases; this doesn't apply once real credentials are configured.
@@ -346,7 +394,7 @@ silently degrades a real deployment; see `useMock` in
 
 ## Next steps
 
-Wire up a real Supabase project and OpenAI key, run `npm run ingest`, then
-`npm run eval:rag` to get an actual live quality baseline for the
-retrieval threshold and prompt — right now that threshold is a
-well-reasoned default, not something verified against real embeddings.
+Install Docker (with WSL2 on Windows), bring up local Supabase, and run
+`npm run ingest` → `npm run eval:retrieval` → `npm run eval:rag` — in that
+order, cheapest first — to get an actual measured baseline for the
+retrieval threshold and prompt instead of the current reasoned defaults.
