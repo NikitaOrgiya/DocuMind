@@ -36,9 +36,9 @@ export function ChatComposer({ value, onChange, onSubmit, disabled }: ChatCompos
         e.preventDefault();
         if (canSubmit) onSubmit();
       }}
-      className="border-t border-neutral-200 bg-white/80 p-4 backdrop-blur"
+      className="border-t border-neutral-200 bg-white/80 px-3 py-3 backdrop-blur sm:px-6 sm:py-4"
     >
-      <div className="flex items-end gap-2">
+      <div className="mx-auto flex w-full max-w-3xl items-end gap-1.5 rounded-3xl border border-neutral-200 bg-white py-1.5 pl-4 pr-1.5 shadow-sm transition-colors focus-within:border-neutral-400 focus-within:ring-2 focus-within:ring-neutral-200">
         <Textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -47,7 +47,7 @@ export function ChatComposer({ value, onChange, onSubmit, disabled }: ChatCompos
           rows={2}
           maxLength={2000}
           disabled={disabled}
-          className="flex-1"
+          className="max-h-40 flex-1 py-1.5 leading-relaxed"
         />
         <Button
           type="submit"
@@ -55,12 +55,13 @@ export function ChatComposer({ value, onChange, onSubmit, disabled }: ChatCompos
           disabled={!canSubmit}
           aria-label="Отправить вопрос"
           title={tooShort ? `Вопрос должен содержать не менее ${MIN_QUESTION_LENGTH} символов.` : undefined}
+          className="!rounded-full shrink-0"
         >
           <SendHorizontal className="h-4 w-4" />
         </Button>
       </div>
       {tooShort && (
-        <p className="mt-1.5 text-xs text-neutral-400">
+        <p className="mx-auto mt-1.5 max-w-3xl px-1 text-xs text-neutral-400">
           Вопрос должен содержать не менее {MIN_QUESTION_LENGTH} символов.
         </p>
       )}

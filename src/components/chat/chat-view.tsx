@@ -69,7 +69,7 @@ export function ChatView({ sessionId: initialSessionId, initialMessages }: ChatV
 
   return (
     <div className="flex h-full flex-1 flex-col">
-      <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
+      <div ref={scrollRef} className="flex flex-1 flex-col overflow-y-auto scrollbar-thin">
         {messages.length === 0 ? (
           <EmptyState onSelect={sendQuestion} loading={loading} />
         ) : (

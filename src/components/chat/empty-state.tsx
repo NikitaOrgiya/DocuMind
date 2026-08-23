@@ -16,7 +16,7 @@ export function EmptyState({
       </div>
       <div>
         <h2 className="text-lg font-semibold text-neutral-900">Задайте DocuMind вопрос</h2>
-        <p className="mt-1 text-sm text-neutral-500">
+        <p className="mx-auto mt-2 max-w-md text-sm text-neutral-500">
           Ответы основаны на проиндексированной базе знаний — сетевые операции, поддержка
           рабочих станций, управление доступом, резервное копирование и реагирование на
           инциденты — со ссылками на источники. На вопросы вне этой темы даётся отказ, а не
