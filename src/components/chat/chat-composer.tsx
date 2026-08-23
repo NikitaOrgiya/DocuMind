@@ -30,15 +30,18 @@ export function ChatComposer({ value, onChange, onSubmit, disabled }: ChatCompos
   }
 
   return (
-    <form
-      ref={formRef}
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (canSubmit) onSubmit();
-      }}
-      className="border-t border-neutral-200 bg-white/80 px-3 py-3 backdrop-blur sm:px-6 sm:py-4"
-    >
-      <div className="mx-auto flex w-full max-w-3xl items-end gap-1.5 rounded-3xl border border-neutral-200 bg-white py-1.5 pl-4 pr-1.5 shadow-sm transition-colors focus-within:border-neutral-400 focus-within:ring-2 focus-within:ring-neutral-200">
+    // Invisible spacer only — no border/background/shadow of its own, so
+    // the rounded pill below reads as the composer, not as a control
+    // sitting inside a second outer box/panel.
+    <div className="px-3 pb-3 pt-2 sm:px-6 sm:pb-4">
+      <form
+        ref={formRef}
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (canSubmit) onSubmit();
+        }}
+        className="mx-auto flex w-full max-w-3xl items-end gap-1.5 rounded-3xl border border-neutral-200 bg-white py-1.5 pl-4 pr-1.5 shadow-sm transition-colors focus-within:border-neutral-400 focus-within:ring-2 focus-within:ring-neutral-200"
+      >
         <Textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
@@ -59,12 +62,12 @@ export function ChatComposer({ value, onChange, onSubmit, disabled }: ChatCompos
         >
           <SendHorizontal className="h-4 w-4" />
         </Button>
-      </div>
+      </form>
       {tooShort && (
         <p className="mx-auto mt-1.5 max-w-3xl px-1 text-xs text-neutral-400">
           Вопрос должен содержать не менее {MIN_QUESTION_LENGTH} символов.
         </p>
       )}
-    </form>
+    </div>
   );
 }

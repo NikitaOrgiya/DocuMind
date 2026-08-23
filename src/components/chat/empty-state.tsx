@@ -10,7 +10,7 @@ export function EmptyState({
   loading: boolean;
 }) {
   return (
-    <div className="mx-auto flex max-w-xl flex-1 flex-col items-center justify-center gap-6 px-4 text-center">
+    <div className="mx-auto flex max-w-xl flex-1 flex-col items-center justify-center gap-6 px-4 pb-16 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/10 text-accent">
         <Sparkles className="h-6 w-6" />
       </div>

@@ -100,9 +100,7 @@ export function ChatView({ sessionId: initialSessionId, initialMessages }: ChatV
         </div>
       )}
 
-      <div className="mx-auto w-full max-w-3xl">
-        <ChatComposer value={input} onChange={setInput} onSubmit={() => sendQuestion(input)} disabled={loading} />
-      </div>
+      <ChatComposer value={input} onChange={setInput} onSubmit={() => sendQuestion(input)} disabled={loading} />
     </div>
   );
 }
