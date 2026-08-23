@@ -346,6 +346,30 @@ npm run eval:rag           # full: adds real chat generation + citation check
 npm run dev
 ```
 
+## Startup after reboot
+
+The commands above are first-time setup. Docker's local Supabase volume
+persists between restarts, so a normal day-to-day start does **not** need
+`db reset` or `ingest` again — only the initial setup, or after an
+intentional `db reset`, does.
+
+```powershell
+# 1. Start Docker Desktop and wait for it to finish starting.
+# 2. Make sure Ollama is running (it's usually a background service already):
+ollama list                 # sanity check — qwen3:4b and nomic-embed-text should both be listed
+
+cd C:\projects\DocuMind
+npx supabase start          # brings the existing local database back up — no reset
+npx supabase status         # optional — confirms it's actually running
+npm run dev
+```
+
+If the sidebar badge shows "Демо · Mock" instead of "Локальный AI ·
+Ollama", `.env.local`'s `DOCUMIND_AI_PROVIDER`/Supabase values aren't
+being picked up — check them. If `/app/documents` looks empty or answers
+always refuse, the corpus was never indexed into this particular database
+(e.g. after a `db reset`) — run `npm run ingest` once.
+
 ## Provider modes
 
 | | `mock` | `ollama` | `openai` |
@@ -518,14 +542,14 @@ it never silently substitutes for a misconfigured real provider; see
 
 **Critical before a portfolio demo:**
 - OpenAI has never been live-verified in this project — every session so far hit an account-level 429 quota on the very first embedding call (the key itself is valid, confirmed separately via `models.list()`). `RAG_MATCH_THRESHOLD=0.72` for `openai` mode is therefore still a reasoned default, not a measured one, unlike Ollama's 0.65.
-- Local generation is slow: real `qwen3:4b` calls took roughly 4–30s depending on context size in this environment (CPU inference). Fine for a portfolio demo recorded once; would need a smaller/faster model or GPU acceleration for anything more interactive.
+- Local generation is slow and scales with retrieved context: real `qwen3:4b` calls ranged roughly 4–55s in this environment (CPU inference), and one case with the full 6-chunk context hit the request's 300s ceiling once and had to be retried. Fine for a portfolio demo recorded once (with room to redo a slow take), not for interactive multi-user use.
+- **Client-side timeout doesn't stop Ollama's server-side generation.** Aborting the fetch on timeout only drops the client connection — Ollama has no cancellation hook, so it keeps computing the abandoned request. A retry right after a timeout can queue behind that still-running "zombie" generation and also take a while before it even starts. Observed once in this project (a 180s timeout followed by a 55s successful retry, most of which was likely the first request finishing in the background). Not fixed — would need a request-concurrency guard or server-side cancellation support, disproportionate for this MVP's scope. The user-facing effect is fully contained: a clear Russian error message and a working Retry button, never a raw error or a hang.
 
 **Recommended later:**
 - `paraphrase-03` in the eval set fails by design at the current Ollama threshold (see [RAG evaluation](#rag-evaluation)) — a genuinely hard paraphrase whose correct match falls below the safety margin. Not fixed, because fixing it (lowering the threshold) would reintroduce a real false-positive risk elsewhere; a stronger/different embedding model could close this gap without that tradeoff.
 - Russian (or other non-English) queries are not reliably supported — measured, not just assumed: the one Russian test question correctly refused rather than hallucinate, but its truly relevant section ranked 5th out of 5 candidates at a similarity well below threshold. Real multilingual support would need a different embedding model and its own calibration pass.
 - No streaming — answers arrive as a single response, a deliberate tradeoff to keep citation validation simple and correct.
 - Chat history in mock mode is in-memory only (unchanged — real modes persist to Supabase, verified).
-- No mobile navigation to History/Documents — the sidebar is `hidden md:flex`; a real mobile nav (hamburger menu) was out of scope for this pass.
 
 **Production-only (intentionally out of scope for this MVP):**
 - Public document upload, an admin/document-management panel, authentication/multi-tenant auth, deployment, and monitoring.
