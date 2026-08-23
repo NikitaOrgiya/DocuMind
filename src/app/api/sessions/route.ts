@@ -6,6 +6,6 @@ export async function GET() {
     const sessions = await getChatStore().listSessions();
     return NextResponse.json({ sessions });
   } catch {
-    return NextResponse.json({ error: "Unable to load chat history." }, { status: 502 });
+    return NextResponse.json({ error: "Не удалось загрузить историю чатов." }, { status: 502 });
   }
 }

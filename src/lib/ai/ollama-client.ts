@@ -18,7 +18,13 @@ const RESPONSE_JSON_SCHEMA = {
 } as const;
 
 const EMBED_TIMEOUT_MS = 60_000;
-const GENERATE_TIMEOUT_MS = 180_000;
+// CPU generation time scales with retrieved context size (up to
+// RAG_MATCH_COUNT chunks). Measured eval runs averaged ~18s/case, but a
+// live demo question that legitimately retrieves close to the full 6-chunk
+// cap was observed taking >180s under system load — bumped to 5 minutes
+// so a genuinely slow-but-working request isn't cut off prematurely; this
+// is a network safety ceiling, not a target latency.
+const GENERATE_TIMEOUT_MS = 300_000;
 
 async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();

@@ -9,13 +9,13 @@ export async function POST(request: Request) {
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
+    return NextResponse.json({ error: "Тело запроса должно быть валидным JSON." }, { status: 400 });
   }
 
   const parsed = chatRequestSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "Invalid request." },
+      { error: parsed.error.issues[0]?.message ?? "Некорректный запрос." },
       { status: 400 }
     );
   }
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       : null;
 
     if (sessionId && !session) {
-      return NextResponse.json({ error: "Chat session not found." }, { status: 404 });
+      return NextResponse.json({ error: "Диалог не найден." }, { status: 404 });
     }
 
     const activeSession = session ?? (await store.createSession(question));
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
       reason: error instanceof Error ? error.message : "unknown",
     });
     return NextResponse.json(
-      { error: "Unable to generate an answer right now. Please try again." },
+      { error: "Не удалось получить ответ. Проверьте локальные сервисы (Ollama, Supabase) и попробуйте ещё раз." },
       { status: 502 }
     );
   }

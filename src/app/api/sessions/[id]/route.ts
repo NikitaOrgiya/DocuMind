@@ -6,10 +6,10 @@ export async function GET(_request: Request, context: { params: Promise<{ id: st
   try {
     const session = await getChatStore().getSession(id);
     if (!session) {
-      return NextResponse.json({ error: "Chat session not found." }, { status: 404 });
+      return NextResponse.json({ error: "Диалог не найден." }, { status: 404 });
     }
     return NextResponse.json({ session });
   } catch {
-    return NextResponse.json({ error: "Unable to load chat session." }, { status: 502 });
+    return NextResponse.json({ error: "Не удалось загрузить диалог." }, { status: 502 });
   }
 }

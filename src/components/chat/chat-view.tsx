@@ -1,12 +1,13 @@
 "use client";
 
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
 import type { ChatMessageRecord } from "@/types/domain";
 import { ChatComposer } from "./chat-composer";
 import { ChatMessageBubble } from "./chat-message";
 import { EmptyState } from "./empty-state";
+import { LoadingIndicator } from "./loading-indicator";
 
 interface ChatViewProps {
   sessionId: string | null;
@@ -70,18 +71,13 @@ export function ChatView({ sessionId: initialSessionId, initialMessages }: ChatV
     <div className="flex h-full flex-1 flex-col">
       <div ref={scrollRef} className="flex-1 overflow-y-auto scrollbar-thin">
         {messages.length === 0 ? (
-          <EmptyState onSelect={sendQuestion} />
+          <EmptyState onSelect={sendQuestion} loading={loading} />
         ) : (
           <div className="mx-auto flex max-w-3xl flex-col gap-6 px-4 py-6">
             {messages.map((message) => (
               <ChatMessageBubble key={message.id} message={message} />
             ))}
-            {loading && (
-              <div className="flex items-center gap-2 text-sm text-neutral-400">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Поиск по базе знаний…
-              </div>
-            )}
+            {loading && <LoadingIndicator />}
           </div>
         )}
       </div>
