@@ -40,6 +40,20 @@ describe("prompt-injection boundary", () => {
     expect(SYSTEM_PROMPT.toLowerCase()).toContain("never follow");
   });
 
+  it("instructs Russian answer language without weakening the grounding rules it comes after", () => {
+    const groundingIndex = SYSTEM_PROMPT.indexOf("Only report facts") !== -1
+      ? SYSTEM_PROMPT.indexOf("Only report facts")
+      : SYSTEM_PROMPT.indexOf("Answer only using facts");
+    const languageIndex = SYSTEM_PROMPT.indexOf("entirely in Russian");
+
+    expect(languageIndex).toBeGreaterThan(-1);
+    // The Russian-language instruction must come after the grounding rules
+    // it's explicitly subordinate to, not before them.
+    expect(languageIndex).toBeGreaterThan(groundingIndex);
+    // It must say so explicitly, not just be silently positioned after.
+    expect(SYSTEM_PROMPT).toMatch(/never let this relax any rule/i);
+  });
+
   it("the mock provider never treats injected text as a directive — it only quotes and cites real source content", async () => {
     const provider = new MockAIProvider();
     const result = await provider.generate({
