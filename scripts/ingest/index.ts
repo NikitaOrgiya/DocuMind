@@ -27,6 +27,44 @@ import { normalizeText } from "../../src/lib/rag/normalize";
 const envLocalPath = path.join(process.cwd(), ".env.local");
 loadEnv({ path: existsSync(envLocalPath) ? envLocalPath : path.join(process.cwd(), ".env") });
 
+const SENSITIVE_KEY_PATTERN = /key|token|auth|secret|cookie|password/i;
+
+/**
+ * Supabase/Postgres errors, plain JS errors, and raw fetch failures all
+ * surface differently here — printing `error?.message` alone silently
+ * prints the literal string "undefined" whenever the thrown value doesn't
+ * have that shape (e.g. a wrapped network/parse failure), hiding the real
+ * cause. This renders whatever fields are actually present, and redacts
+ * anything that looks like a credential if a raw object ever needs a
+ * fallback JSON dump.
+ */
+function describeError(error: unknown): string {
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    const known = ["message", "code", "details", "hint", "name", "status", "statusCode"] as const;
+    const parts = known
+      .filter((key) => record[key] !== undefined && record[key] !== null && record[key] !== "")
+      .map((key) => `${key}=${JSON.stringify(record[key])}`);
+
+    if (parts.length > 0) {
+      return parts.join(" ");
+    }
+
+    // No recognizable error fields at all — fall back to a redacted dump
+    // so at least the shape of the failure is visible, never its secrets.
+    try {
+      const redacted = JSON.stringify(record, (key, value) =>
+        SENSITIVE_KEY_PATTERN.test(key) ? "[redacted]" : value
+      );
+      return `unrecognized error shape: ${redacted}`;
+    } catch {
+      return `unrecognized, non-serializable error (constructor: ${error.constructor?.name ?? "unknown"})`;
+    }
+  }
+
+  return String(error);
+}
+
 // Re-read after loadEnv, since lib/config.ts's `process.env.*` reads happen
 // at module import time, before dotenv had a chance to populate them here.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -71,7 +109,7 @@ async function main() {
       .single();
 
     if (upsertError || !documentRow) {
-      console.error(`Failed to upsert document "${doc.slug}": ${upsertError?.message}`);
+      console.error(`Failed to upsert document "${doc.slug}": ${describeError(upsertError)}`);
       process.exit(1);
     }
 
@@ -81,7 +119,7 @@ async function main() {
       .eq("document_id", documentRow.id);
 
     if (deleteError) {
-      console.error(`Failed to clear existing chunks for "${doc.slug}": ${deleteError.message}`);
+      console.error(`Failed to clear existing chunks for "${doc.slug}": ${describeError(deleteError)}`);
       process.exit(1);
     }
 
@@ -117,7 +155,7 @@ async function main() {
 
     const { error: insertError } = await supabase.from("document_chunks").insert(rows);
     if (insertError) {
-      console.error(`Failed to insert chunks for "${doc.slug}": ${insertError.message}`);
+      console.error(`Failed to insert chunks for "${doc.slug}": ${describeError(insertError)}`);
       process.exit(1);
     }
 
@@ -130,6 +168,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("Ingestion failed:", error instanceof Error ? error.message : error);
+  console.error("Ingestion failed:", describeError(error));
   process.exit(1);
 });
