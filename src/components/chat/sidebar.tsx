@@ -9,12 +9,20 @@ import { cn } from "@/lib/utils";
 import type { AIProviderKind } from "@/lib/config";
 import type { ChatSessionRecord } from "@/types/domain";
 
-interface SidebarProps {
+interface SidebarContentProps {
   aiProvider: AIProviderKind;
   documentCount: number;
+  /** Called after any nav link is clicked — lets the mobile drawer close itself. */
+  onNavigate?: () => void;
 }
 
-export function Sidebar({ aiProvider, documentCount }: SidebarProps) {
+/**
+ * The actual nav content, shared verbatim between the desktop sidebar
+ * (always visible, `md:flex`) and the mobile drawer (`MobileHeader`) — one
+ * set of data/markup, two shells, per the "no separate mobile
+ * architecture" constraint.
+ */
+export function SidebarContent({ aiProvider, documentCount, onNavigate }: SidebarContentProps) {
   const pathname = usePathname();
   const [sessions, setSessions] = useState<ChatSessionRecord[]>([]);
 
@@ -34,10 +42,11 @@ export function Sidebar({ aiProvider, documentCount }: SidebarProps) {
   }, [pathname]);
 
   return (
-    <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-neutral-200 bg-neutral-50/60 md:flex">
+    <>
       <div className="flex flex-col gap-1.5 p-3">
         <Link
           href="/app"
+          onClick={onNavigate}
           className="flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-900 shadow-sm transition-colors hover:bg-neutral-50"
         >
           <MessageSquarePlus className="h-4 w-4" />
@@ -45,6 +54,7 @@ export function Sidebar({ aiProvider, documentCount }: SidebarProps) {
         </Link>
         <Link
           href="/app/documents"
+          onClick={onNavigate}
           className={cn(
             "flex items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900",
             pathname.startsWith("/app/documents") && "bg-neutral-100 text-neutral-900"
@@ -79,6 +89,8 @@ export function Sidebar({ aiProvider, documentCount }: SidebarProps) {
                 <Link
                   href={`/app/chat/${session.id}`}
                   prefetch={false}
+                  onClick={onNavigate}
+                  title={session.title}
                   className={cn(
                     "block truncate rounded-md px-2 py-1.5 text-sm text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900",
                     pathname === `/app/chat/${session.id}` && "bg-neutral-100 font-medium text-neutral-900"
@@ -103,7 +115,7 @@ export function Sidebar({ aiProvider, documentCount }: SidebarProps) {
             title="DOCUMIND_AI_PROVIDER не задан (или =mock) — используется детерминированный локальный mock вместо реального пайплайна. См. README."
           >
             <FlaskConical className="h-3.5 w-3.5" />
-            Локальный демо-режим
+            Демо · Mock
           </div>
         )}
         {aiProvider === "ollama" && (
@@ -112,16 +124,29 @@ export function Sidebar({ aiProvider, documentCount }: SidebarProps) {
             title="Ollama работает локально — embeddings и генерация выполняются на этой машине, без внешних API-вызовов."
           >
             <Cpu className="h-3.5 w-3.5" />
-            Локальный AI — Ollama
+            Локальный AI · Ollama
           </div>
         )}
         {aiProvider === "openai" && (
           <div className="mt-1.5 flex items-center gap-1.5 text-sky-600">
             <Cloud className="h-3.5 w-3.5" />
-            Облачный AI — OpenAI
+            OpenAI
           </div>
         )}
       </div>
+    </>
+  );
+}
+
+interface SidebarProps {
+  aiProvider: AIProviderKind;
+  documentCount: number;
+}
+
+export function Sidebar({ aiProvider, documentCount }: SidebarProps) {
+  return (
+    <aside className="hidden h-full w-64 shrink-0 flex-col border-r border-neutral-200 bg-neutral-50/60 md:flex">
+      <SidebarContent aiProvider={aiProvider} documentCount={documentCount} />
     </aside>
   );
 }
