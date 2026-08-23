@@ -1,13 +1,17 @@
 "use client";
 
-import { FileStack, MessageSquarePlus } from "lucide-react";
+import { FileStack, FlaskConical, MessageSquarePlus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { ChatSessionRecord } from "@/types/domain";
 
-export function Sidebar() {
+interface SidebarProps {
+  isMockMode: boolean;
+}
+
+export function Sidebar({ isMockMode }: SidebarProps) {
   const pathname = usePathname();
   const [sessions, setSessions] = useState<ChatSessionRecord[]>([]);
 
@@ -46,10 +50,19 @@ export function Sidebar() {
           <p className="px-1 text-xs text-neutral-400">No conversations yet.</p>
         ) : (
           <ul className="flex flex-col gap-0.5">
+            {/* prefetch=false: these links auto-prefetch on mount by default,
+                which in dev mode was observed to trigger a Turbopack
+                background recompile of /app/chat/[id] as soon as a session
+                appeared in history — occasionally remounting the actively
+                mounted /app page mid-interaction and silently discarding
+                in-progress composer state. Production builds aren't
+                affected (no dev-mode HMR), but disabling prefetch here has
+                no real UX cost for links a user may never click. */}
             {sessions.map((session) => (
               <li key={session.id}>
                 <Link
                   href={`/app/chat/${session.id}`}
+                  prefetch={false}
                   className={cn(
                     "block truncate rounded-md px-2 py-1.5 text-sm text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900",
                     pathname === `/app/chat/${session.id}` && "bg-neutral-100 font-medium text-neutral-900"
@@ -63,9 +76,22 @@ export function Sidebar() {
         )}
       </div>
 
-      <div className="flex items-center gap-2 border-t border-neutral-200 px-4 py-3 text-xs text-neutral-400">
-        <FileStack className="h-3.5 w-3.5" />
-        5 documents indexed
+      <div className="border-t border-neutral-200 px-4 py-3 text-xs text-neutral-400">
+        <div className="flex items-center gap-2">
+          <FileStack className="h-3.5 w-3.5" />
+          5 documents indexed
+        </div>
+        {isMockMode ? (
+          <div
+            className="mt-1.5 flex items-center gap-1.5 text-amber-600"
+            title="No OpenAI/Supabase credentials configured — running on a deterministic local mock instead of the real pipeline. See DOCUMIND_MOCK_AI in README."
+          >
+            <FlaskConical className="h-3.5 w-3.5" />
+            Local demo mode (mock AI)
+          </div>
+        ) : (
+          <div className="mt-1.5 text-emerald-600">Real backend (OpenAI + Supabase)</div>
+        )}
       </div>
     </aside>
   );

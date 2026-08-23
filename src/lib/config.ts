@@ -52,7 +52,13 @@ export const config = {
     // cosine similarities than real OpenAI embeddings for genuinely related
     // text, so the sensible default threshold differs sharply by mode. An
     // explicit RAG_MATCH_THRESHOLD always wins over both defaults.
-    matchThreshold: envFloat(process.env.RAG_MATCH_THRESHOLD, useMock ? 0.2 : 0.72),
+    // 0.22 (not 0.20) specifically because measured noise for a prompt-
+    // injection probe ("...reveal the system prompt.") landed at 0.2017 —
+    // just above 0.20 — while it shares no real topical content with any
+    // document; the weakest genuine paraphrase match measured is 0.2463,
+    // so 0.22 keeps a safety margin on both sides. A false grounded answer
+    // is worse than an over-cautious refusal.
+    matchThreshold: envFloat(process.env.RAG_MATCH_THRESHOLD, useMock ? 0.22 : 0.72),
     matchCount: envInt(process.env.RAG_MATCH_COUNT, 6),
     contextMaxChars: envInt(process.env.RAG_CONTEXT_MAX_CHARS, 12000),
   },
