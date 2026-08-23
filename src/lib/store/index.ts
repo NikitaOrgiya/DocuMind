@@ -1,5 +1,5 @@
 import "server-only";
-import { useMock } from "@/lib/config";
+import { assertRealProviderConfigured, useMock } from "@/lib/config";
 import type { ChatStore } from "./chat-store";
 import { InMemoryChatStore } from "./memory-store";
 import { SupabaseChatStore } from "./supabase-store";
@@ -10,6 +10,7 @@ declare global {
 
 export function getChatStore(): ChatStore {
   if (!globalThis.__documindChatStore) {
+    assertRealProviderConfigured();
     globalThis.__documindChatStore = useMock ? new InMemoryChatStore() : new SupabaseChatStore();
   }
   return globalThis.__documindChatStore;

@@ -4,11 +4,16 @@
  * Populates Supabase/pgvector from docs/sample-corpus. This is a standalone
  * CLI script (run with tsx, not inside the Next.js server runtime), so it
  * intentionally does NOT import the app's server-only-guarded modules
- * (lib/ai/openai-provider.ts, lib/supabase/server-client.ts) — the
- * "server-only" package throws unconditionally outside Next's
- * react-server bundling condition. It builds its own thin OpenAI/Supabase
- * clients instead and reuses only the pure logic modules (corpus loading,
- * normalization, chunking, config).
+ * (lib/ai/openai-provider.ts, lib/ai/ollama-provider.ts,
+ * lib/supabase/server-client.ts) — the "server-only" package throws
+ * unconditionally outside Next's react-server bundling condition. It builds
+ * its own thin Supabase client and reuses the pure logic modules (corpus
+ * loading, normalization, chunking, config, and — for Ollama — the shared
+ * lib/ai/ollama-client.ts, which is itself not server-only-guarded).
+ *
+ * Provider-aware: DOCUMIND_AI_PROVIDER selects "ollama" (real local
+ * embeddings, no external calls, no API key) or "openai" (real OpenAI
+ * embeddings). "mock" isn't meaningful here — mock mode has no database.
  *
  * Idempotent: re-running upserts each document by slug, deletes its
  * existing chunks, and rebuilds them — it never accumulates duplicates.
@@ -18,8 +23,9 @@ import path from "node:path";
 import { config as loadEnv } from "dotenv";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
+import { embedWithOllama } from "../../src/lib/ai/ollama-client";
 import { chunkDocument } from "../../src/lib/rag/chunk";
-import { config } from "../../src/lib/config";
+import { config, EXPECTED_EMBEDDING_DIMENSIONS } from "../../src/lib/config";
 import { loadCorpus } from "../../src/lib/rag/corpus";
 import { logger } from "../../src/lib/logging/logger";
 import { normalizeText } from "../../src/lib/rag/normalize";
@@ -69,26 +75,44 @@ function describeError(error: unknown): string {
 // at module import time, before dotenv had a chance to populate them here.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const provider = config.aiProvider === "mock" ? "ollama" : config.aiProvider;
 const openaiApiKey = process.env.OPENAI_API_KEY;
-const embeddingModel = process.env.OPENAI_EMBEDDING_MODEL || config.openai.embeddingModel;
+const embeddingModel =
+  provider === "ollama"
+    ? process.env.OLLAMA_EMBEDDING_MODEL || config.ollama.embeddingModel
+    : process.env.OPENAI_EMBEDDING_MODEL || config.openai.embeddingModel;
+
+async function embed(texts: string[]): Promise<number[][]> {
+  if (provider === "ollama") {
+    return embedWithOllama(config.ollama.baseUrl, embeddingModel, texts);
+  }
+  const openai = new OpenAI({ apiKey: openaiApiKey! });
+  const response = await openai.embeddings.create({ model: embeddingModel, input: texts });
+  return response.data.sort((a, b) => a.index - b.index).map((d) => d.embedding);
+}
 
 async function main() {
-  if (!supabaseUrl || !supabaseServiceKey || !openaiApiKey) {
+  if (!supabaseUrl || !supabaseServiceKey) {
     console.log(
-      "SKIPPED — missing external credentials (need NEXT_PUBLIC_SUPABASE_URL, " +
-        "SUPABASE_SERVICE_ROLE_KEY, and OPENAI_API_KEY in .env.local or .env). " +
+      "SKIPPED — missing NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY in .env.local or .env. " +
         "The rest of DocuMind still builds and runs in local mock mode without these."
     );
     process.exit(0);
   }
+  if (provider === "openai" && !openaiApiKey) {
+    console.log("SKIPPED — DOCUMIND_AI_PROVIDER=openai but OPENAI_API_KEY is missing.");
+    process.exit(0);
+  }
+
+  console.log(`Ingesting with provider="${provider}", embedding model="${embeddingModel}".`);
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey, {
     auth: { persistSession: false },
   });
-  const openai = new OpenAI({ apiKey: openaiApiKey });
 
   const documents = await loadCorpus();
   let totalChunks = 0;
+  const expectedDimension = EXPECTED_EMBEDDING_DIMENSIONS[provider];
 
   for (const doc of documents) {
     logger.info("ingest.document_started", { slug: doc.slug });
@@ -131,16 +155,22 @@ async function main() {
 
     let embeddings: number[][];
     try {
-      const response = await openai.embeddings.create({
-        model: embeddingModel,
-        input: chunks.map((c) => c.content),
-      });
-      embeddings = response.data.sort((a, b) => a.index - b.index).map((d) => d.embedding);
+      embeddings = await embed(chunks.map((c) => c.content));
     } catch (error) {
       logger.error("ingest.embedding_failed", {
         slug: doc.slug,
+        provider,
         reason: error instanceof Error ? error.message : "unknown",
       });
+      process.exit(1);
+    }
+
+    if (expectedDimension !== undefined && embeddings[0]?.length !== expectedDimension) {
+      console.error(
+        `Embedding dimension mismatch: provider "${provider}" (model "${embeddingModel}") produced ` +
+          `${embeddings[0]?.length ?? 0}-dimensional vectors, but the database schema expects ${expectedDimension}. ` +
+          "Check DOCUMIND_AI_PROVIDER against the migration your local Supabase was reset with."
+      );
       process.exit(1);
     }
 

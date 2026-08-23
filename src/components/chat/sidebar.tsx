@@ -1,19 +1,20 @@
 "use client";
 
-import { BookMarked, FlaskConical, MessageSquarePlus } from "lucide-react";
+import { BookMarked, Cloud, Cpu, FlaskConical, MessageSquarePlus } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { pluralizeRu } from "@/lib/i18n/pluralize-ru";
 import { cn } from "@/lib/utils";
+import type { AIProviderKind } from "@/lib/config";
 import type { ChatSessionRecord } from "@/types/domain";
 
 interface SidebarProps {
-  isMockMode: boolean;
+  aiProvider: AIProviderKind;
   documentCount: number;
 }
 
-export function Sidebar({ isMockMode, documentCount }: SidebarProps) {
+export function Sidebar({ aiProvider, documentCount }: SidebarProps) {
   const pathname = usePathname();
   const [sessions, setSessions] = useState<ChatSessionRecord[]>([]);
 
@@ -96,16 +97,29 @@ export function Sidebar({ isMockMode, documentCount }: SidebarProps) {
           {documentCount} {pluralizeRu(documentCount, "документ", "документа", "документов")} в базе
           знаний
         </div>
-        {isMockMode ? (
+        {aiProvider === "mock" && (
           <div
             className="mt-1.5 flex items-center gap-1.5 text-amber-600"
-            title="Нет учётных данных OpenAI/Supabase — используется детерминированный локальный mock вместо реального пайплайна. См. DOCUMIND_MOCK_AI в README."
+            title="DOCUMIND_AI_PROVIDER не задан (или =mock) — используется детерминированный локальный mock вместо реального пайплайна. См. README."
           >
             <FlaskConical className="h-3.5 w-3.5" />
             Локальный демо-режим
           </div>
-        ) : (
-          <div className="mt-1.5 text-emerald-600">Реальный бэкенд (OpenAI + Supabase)</div>
+        )}
+        {aiProvider === "ollama" && (
+          <div
+            className="mt-1.5 flex items-center gap-1.5 text-emerald-600"
+            title="Ollama работает локально — embeddings и генерация выполняются на этой машине, без внешних API-вызовов."
+          >
+            <Cpu className="h-3.5 w-3.5" />
+            Локальный AI — Ollama
+          </div>
+        )}
+        {aiProvider === "openai" && (
+          <div className="mt-1.5 flex items-center gap-1.5 text-sky-600">
+            <Cloud className="h-3.5 w-3.5" />
+            Облачный AI — OpenAI
+          </div>
         )}
       </div>
     </aside>

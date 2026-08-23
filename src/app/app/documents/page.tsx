@@ -14,7 +14,7 @@ export default async function DocumentsPage() {
         <h1 className="text-lg font-semibold text-neutral-900">База знаний</h1>
         <p className="mt-1 text-sm text-neutral-500">
           {documents.length} демонстрационных документов, проиндексированных для локального
-          mock-режима DocuMind.
+          RAG-пайплайна DocuMind.
         </p>
 
         <div className="mt-6 flex flex-col gap-3">

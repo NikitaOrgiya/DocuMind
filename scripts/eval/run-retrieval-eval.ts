@@ -21,13 +21,20 @@
  *
  * Like scripts/ingest and scripts/eval, this is a standalone CLI script and
  * does not import the app's server-only-guarded modules (see those scripts
- * for why) — it builds its own thin OpenAI/Supabase clients.
+ * for why) — it builds its own thin Supabase client and reuses the shared,
+ * non-server-only lib/ai/ollama-client.ts for Ollama.
+ *
+ * Provider-aware via DOCUMIND_AI_PROVIDER ("ollama" or "openai"; "mock"
+ * falls back to "ollama" since retrieval calibration is meaningless
+ * without a real embedding model).
  */
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { config as loadEnv } from "dotenv";
 import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
+import { embedWithOllama } from "../../src/lib/ai/ollama-client";
+import { config } from "../../src/lib/config";
 import evalCases from "../../evals/rag-eval.json";
 
 const envLocalPath = path.join(process.cwd(), ".env.local");
@@ -35,8 +42,22 @@ loadEnv({ path: existsSync(envLocalPath) ? envLocalPath : path.join(process.cwd(
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const provider = config.aiProvider === "mock" ? "ollama" : config.aiProvider;
 const openaiApiKey = process.env.OPENAI_API_KEY;
-const embeddingModel = process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small";
+const embeddingModel =
+  provider === "ollama"
+    ? process.env.OLLAMA_EMBEDDING_MODEL || config.ollama.embeddingModel
+    : process.env.OPENAI_EMBEDDING_MODEL || config.openai.embeddingModel;
+
+async function embedOne(text: string): Promise<number[]> {
+  if (provider === "ollama") {
+    const [vector] = await embedWithOllama(config.ollama.baseUrl, embeddingModel, [text]);
+    return vector;
+  }
+  const openai = new OpenAI({ apiKey: openaiApiKey! });
+  const response = await openai.embeddings.create({ model: embeddingModel, input: text });
+  return response.data[0].embedding;
+}
 
 const RAW_TOP_K = 10;
 const CANDIDATE_THRESHOLDS = [0.5, 0.55, 0.6, 0.65, 0.7, 0.72, 0.75, 0.8, 0.85];
@@ -81,27 +102,27 @@ function hitRank(matches: RpcRow[], expectedDocuments: string[]): number | null 
 }
 
 async function main() {
-  if (!supabaseUrl || !supabaseServiceKey || !openaiApiKey) {
+  if (!supabaseUrl || !supabaseServiceKey) {
     console.log(
-      "SKIPPED — missing external credentials (need NEXT_PUBLIC_SUPABASE_URL, " +
-        "SUPABASE_SERVICE_ROLE_KEY, and OPENAI_API_KEY). Retrieval calibration requires " +
-        "real embeddings + a real pgvector index; it cannot be measured with mocks."
+      "SKIPPED — missing NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY. " +
+        "Retrieval calibration requires a real pgvector index; it cannot be measured with mocks."
     );
     process.exit(0);
   }
+  if (provider === "openai" && !openaiApiKey) {
+    console.log("SKIPPED — DOCUMIND_AI_PROVIDER=openai but OPENAI_API_KEY is missing.");
+    process.exit(0);
+  }
+
+  console.log(`Evaluating retrieval with provider="${provider}", embedding model="${embeddingModel}".`);
 
   const supabase = createClient(supabaseUrl, supabaseServiceKey, { auth: { persistSession: false } });
-  const openai = new OpenAI({ apiKey: openaiApiKey });
 
   const cases = evalCases as EvalCase[];
   const results: CaseResult[] = [];
 
   for (const testCase of cases) {
-    const embeddingResponse = await openai.embeddings.create({
-      model: embeddingModel,
-      input: testCase.question,
-    });
-    const queryEmbedding = embeddingResponse.data[0].embedding;
+    const queryEmbedding = await embedOne(testCase.question);
 
     const { data, error } = await supabase.rpc("search_document_chunks", {
       query_embedding: queryEmbedding,
