@@ -43,7 +43,7 @@ export function ChatComposer({ value, onChange, onSubmit, disabled }: ChatCompos
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask a question about the indexed documents…"
+          placeholder="Задайте вопрос по проиндексированным документам…"
           rows={2}
           maxLength={2000}
           disabled={disabled}
@@ -53,15 +53,15 @@ export function ChatComposer({ value, onChange, onSubmit, disabled }: ChatCompos
           type="submit"
           size="icon"
           disabled={!canSubmit}
-          aria-label="Send question"
-          title={tooShort ? `Question must be at least ${MIN_QUESTION_LENGTH} characters.` : undefined}
+          aria-label="Отправить вопрос"
+          title={tooShort ? `Вопрос должен содержать не менее ${MIN_QUESTION_LENGTH} символов.` : undefined}
         >
           <SendHorizontal className="h-4 w-4" />
         </Button>
       </div>
       {tooShort && (
         <p className="mt-1.5 text-xs text-neutral-400">
-          Question must be at least {MIN_QUESTION_LENGTH} characters.
+          Вопрос должен содержать не менее {MIN_QUESTION_LENGTH} символов.
         </p>
       )}
     </form>

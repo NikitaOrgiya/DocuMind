@@ -7,7 +7,7 @@ import { validateCitations } from "./citations";
 import { retrieveSources } from "./retrieval";
 
 const INSUFFICIENT_CONTEXT_MESSAGE =
-  "I don't have enough information in the available documents to answer this question.";
+  "У меня недостаточно информации в доступных документах, чтобы ответить на этот вопрос.";
 
 export interface AnswerResult {
   answer: string;

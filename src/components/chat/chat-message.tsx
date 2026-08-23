@@ -34,7 +34,7 @@ export function ChatMessageBubble({ message }: { message: ChatMessageRecord }) {
           {isRefusal && (
             <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-amber-700">
               <AlertCircle className="h-3.5 w-3.5" />
-              Not found in the knowledge base
+              Информация не найдена в базе знаний
             </div>
           )}
           {isUser ? (
@@ -49,7 +49,7 @@ export function ChatMessageBubble({ message }: { message: ChatMessageRecord }) {
         {!isUser && message.sources.length > 0 && (
           <div className="w-full">
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-400">
-              Sources
+              Источники
             </p>
             <div className="flex gap-2 overflow-x-auto pb-1">
               {message.sources.map((source) => (

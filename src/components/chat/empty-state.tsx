@@ -8,11 +8,12 @@ export function EmptyState({ onSelect }: { onSelect: (question: string) => void 
         <Sparkles className="h-6 w-6" />
       </div>
       <div>
-        <h2 className="text-lg font-semibold text-neutral-900">Ask DocuMind anything</h2>
+        <h2 className="text-lg font-semibold text-neutral-900">Задайте DocuMind вопрос</h2>
         <p className="mt-1 text-sm text-neutral-500">
-          Answers are grounded in the indexed knowledge base — network operations, workstation
-          support, access management, backup recovery, and incident response — with cited
-          sources. Questions outside that scope are declined rather than guessed at.
+          Ответы основаны на проиндексированной базе знаний — сетевые операции, поддержка
+          рабочих станций, управление доступом, резервное копирование и реагирование на
+          инциденты — со ссылками на источники. На вопросы вне этой темы даётся отказ, а не
+          выдуманный ответ.
         </p>
       </div>
       <div className="w-full">

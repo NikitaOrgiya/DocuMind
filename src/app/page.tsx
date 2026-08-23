@@ -4,28 +4,28 @@ import Link from "next/link";
 const FEATURES = [
   {
     icon: Sparkles,
-    title: "Semantic search",
-    description: "Questions are matched against document meaning, not just keywords, via pgvector.",
+    title: "Семантический поиск",
+    description: "Вопросы сопоставляются со смыслом документа, а не только с ключевыми словами, через pgvector.",
   },
   {
     icon: BookOpenCheck,
     title: "Retrieval-augmented generation",
-    description: "Answers are composed strictly from the passages retrieval actually found.",
+    description: "Ответы строятся строго из фрагментов, которые реально нашёл поиск.",
   },
   {
     icon: Link2,
-    title: "Source-backed answers",
-    description: "Every claim links back to the document and section it came from.",
+    title: "Ответы со ссылками на источники",
+    description: "Каждое утверждение ведёт обратно к документу и разделу, из которого оно взято.",
   },
   {
     icon: ShieldCheck,
-    title: "Hallucination resistance",
-    description: "No relevant context means a clear refusal, not an invented answer.",
+    title: "Устойчивость к галлюцинациям",
+    description: "Нет релевантного контекста — значит явный отказ, а не выдуманный ответ.",
   },
   {
     icon: History,
-    title: "Conversation history",
-    description: "Past questions, answers, and their sources persist across sessions.",
+    title: "История диалогов",
+    description: "Прошлые вопросы, ответы и их источники сохраняются между сессиями.",
   },
 ];
 
@@ -39,7 +39,7 @@ export default function LandingPage() {
             href="/app"
             className="rounded-lg bg-neutral-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-neutral-700"
           >
-            Open DocuMind
+            Открыть DocuMind
           </Link>
         </div>
       </header>
@@ -48,25 +48,25 @@ export default function LandingPage() {
         <section className="mx-auto max-w-3xl px-6 py-24 text-center">
           <p className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-xs font-medium text-neutral-500">
             <Sparkles className="h-3.5 w-3.5 text-accent" />
-            Retrieval-augmented, grounded, citation-first
+            Retrieval-augmented, с проверкой источников
           </p>
           <h1 className="text-4xl font-semibold tracking-tight text-neutral-900 sm:text-5xl">
             DocuMind
           </h1>
           <p className="mt-3 text-lg text-neutral-600">
-            AI knowledge assistant for technical documentation
+            AI-ассистент по технической документации
           </p>
           <p className="mx-auto mt-4 max-w-xl text-sm text-neutral-500">
-            DocuMind answers only from a curated, pre-indexed set of documents and shows exactly
-            which passages it used. If the answer isn&apos;t in the knowledge base, it says so
-            instead of guessing.
+            DocuMind отвечает только на основе подготовленной, заранее проиндексированной базы
+            документов и точно показывает, какие фрагменты использовал. Если ответа нет в базе
+            знаний, он честно об этом говорит вместо того, чтобы угадывать.
           </p>
           <div className="mt-8 flex justify-center">
             <Link
               href="/app"
               className="rounded-lg bg-neutral-900 px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-neutral-700"
             >
-              Open DocuMind
+              Открыть DocuMind
             </Link>
           </div>
         </section>
@@ -85,7 +85,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="border-t border-neutral-200 px-6 py-6 text-center text-xs text-neutral-400">
-        DocuMind is a portfolio project. The document base is a fixed synthetic demo corpus.
+        DocuMind — портфолио-проект. База документов — фиксированный синтетический демо-корпус.
       </footer>
     </div>
   );

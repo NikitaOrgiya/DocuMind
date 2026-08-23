@@ -48,7 +48,7 @@ export function ChatView({ sessionId: initialSessionId, initialMessages }: ChatV
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error ?? "Unable to generate an answer right now. Please try again.");
+        throw new Error(data.error ?? "Не удалось сформировать ответ. Попробуйте ещё раз.");
       }
 
       const payload = data as ChatApiResponse;
@@ -60,7 +60,7 @@ export function ChatView({ sessionId: initialSessionId, initialMessages }: ChatV
       }
       setLastQuestion(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unable to generate an answer right now.");
+      setError(e instanceof Error ? e.message : "Не удалось сформировать ответ.");
     } finally {
       setLoading(false);
     }
@@ -79,7 +79,7 @@ export function ChatView({ sessionId: initialSessionId, initialMessages }: ChatV
             {loading && (
               <div className="flex items-center gap-2 text-sm text-neutral-400">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Searching the knowledge base…
+                Поиск по базе знаний…
               </div>
             )}
           </div>
@@ -98,7 +98,7 @@ export function ChatView({ sessionId: initialSessionId, initialMessages }: ChatV
               onClick={() => sendQuestion(lastQuestion)}
               className="shrink-0 rounded-lg border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
             >
-              Retry
+              Повторить
             </button>
           )}
         </div>

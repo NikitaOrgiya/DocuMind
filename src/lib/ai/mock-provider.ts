@@ -107,7 +107,7 @@ export class MockAIProvider implements AIProvider {
       return {
         status: "insufficient_context",
         answer:
-          "I don't have enough information in the available documents to answer this question.",
+          "У меня недостаточно информации в доступных документах, чтобы ответить на этот вопрос.",
         citations: [],
         model: MOCK_MODEL_NAME,
       };

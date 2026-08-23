@@ -10,10 +10,10 @@ export function SourceCard({ source }: { source: SourceCardType }) {
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-neutral-900">{source.documentTitle}</p>
           {source.section ? (
-            <p className="truncate text-xs text-neutral-500">Section: {source.section}</p>
+            <p className="truncate text-xs text-neutral-500">Раздел: {source.section}</p>
           ) : null}
           {source.pageNumber != null ? (
-            <p className="text-xs text-neutral-500">Page {source.pageNumber}</p>
+            <p className="text-xs text-neutral-500">Стр. {source.pageNumber}</p>
           ) : null}
         </div>
       </div>

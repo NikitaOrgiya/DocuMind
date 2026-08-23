@@ -13,16 +13,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "DocuMind — AI knowledge assistant",
+  title: "DocuMind — AI-ассистент по базе знаний",
   description:
-    "DocuMind answers questions from a curated document base using retrieval-augmented generation, and always shows its sources.",
+    "DocuMind отвечает на вопросы по подготовленной базе документов с помощью retrieval-augmented generation и всегда показывает свои источники.",
+  other: {
+    // Google Translate honors this even when a browser's UI language
+    // differs from the page's declared `lang` — see translate="no" below,
+    // which is the primary defense (a correctly declared lang="ru" page
+    // usually isn't offered translation to a ru-locale browser at all).
+    google: "notranslate",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      lang="ru"
+      translate="no"
+      className={`notranslate ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex h-full min-h-full flex-col bg-background text-foreground">
         {children}
