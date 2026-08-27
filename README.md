@@ -309,7 +309,6 @@ See [.env.example](.env.example) for the full list with comments. Summary:
 ## Local setup
 
 ```powershell
-cd C:\projects\DocuMind
 npm install
 copy .env.example .env.local
 ```
@@ -331,7 +330,6 @@ reading the migration files) — schema, indexes, RLS/grants, and the
 `search_document_chunks` RPC all checked against the live database.
 
 ```powershell
-cd C:\projects\DocuMind
 npx supabase init          # only if supabase/config.toml doesn't exist yet
 npx supabase start
 npx supabase db reset      # applies migrations 0001 → 0002 → 0003, in order
@@ -358,7 +356,6 @@ intentional `db reset`, does.
 # 2. Make sure Ollama is running (it's usually a background service already):
 ollama list                 # sanity check — qwen3:4b and nomic-embed-text should both be listed
 
-cd C:\projects\DocuMind
 npx supabase start          # brings the existing local database back up — no reset
 npx supabase status         # optional — confirms it's actually running
 npm run dev
