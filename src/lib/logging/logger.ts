@@ -8,6 +8,7 @@ type LogEvent =
   | "rag.retrieval_completed"
   | "rag.insufficient_context"
   | "rag.generation_failed"
+  | "rag.model_unavailable"
   | "rag.citation_rejected"
   | "ingest.document_started"
   | "ingest.document_completed"

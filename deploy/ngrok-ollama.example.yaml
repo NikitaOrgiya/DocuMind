@@ -1,0 +1,23 @@
+# ngrok traffic policy for the public demo: lets the deployed app reach the
+# Ollama running on the developer's computer, and nobody else.
+#
+# 1. Copy to deploy/ngrok-ollama.yaml (git-ignored) and replace YOUR_TOKEN
+#    with a long random string — the same value as OLLAMA_AUTH_TOKEN in the
+#    deployed app's environment.
+# 2. ngrok http 11434 --traffic-policy-file deploy/ngrok-ollama.yaml
+#
+# Rule 1 rejects any request without the token before it reaches the
+# computer. Rule 2 rewrites the Host header, because Ollama answers 403 to
+# requests addressed to any host other than localhost.
+on_http_request:
+  - expressions:
+      - "!hasReqHeader('Authorization') || getReqHeader('Authorization')[0] != 'Bearer YOUR_TOKEN'"
+    actions:
+      - type: deny
+        config:
+          status_code: 401
+  - actions:
+      - type: add-headers
+        config:
+          headers:
+            host: localhost

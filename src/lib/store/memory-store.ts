@@ -4,6 +4,7 @@ import type { ChatStore, NewMessage } from "./chat-store";
 import { titleFromQuestion } from "./chat-store";
 
 interface StoredSession {
+  ownerId: string;
   session: ChatSessionRecord;
   messages: ChatMessageRecord[];
 }
@@ -17,7 +18,7 @@ export class InMemoryChatStore implements ChatStore {
   readonly name = "in-memory";
   private sessions = new Map<string, StoredSession>();
 
-  async createSession(firstQuestion: string): Promise<ChatSessionRecord> {
+  async createSession(firstQuestion: string, ownerId: string): Promise<ChatSessionRecord> {
     const now = new Date().toISOString();
     const session: ChatSessionRecord = {
       id: crypto.randomUUID(),
@@ -25,18 +26,19 @@ export class InMemoryChatStore implements ChatStore {
       createdAt: now,
       updatedAt: now,
     };
-    this.sessions.set(session.id, { session, messages: [] });
+    this.sessions.set(session.id, { ownerId, session, messages: [] });
     return session;
   }
 
-  async getSession(id: string): Promise<ChatSessionWithMessages | null> {
+  async getSession(id: string, ownerId: string): Promise<ChatSessionWithMessages | null> {
     const entry = this.sessions.get(id);
-    if (!entry) return null;
+    if (!entry || entry.ownerId !== ownerId) return null;
     return { ...entry.session, messages: entry.messages };
   }
 
-  async listSessions(): Promise<ChatSessionRecord[]> {
+  async listSessions(ownerId: string): Promise<ChatSessionRecord[]> {
     return [...this.sessions.values()]
+      .filter((e) => e.ownerId === ownerId)
       .map((e) => e.session)
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }

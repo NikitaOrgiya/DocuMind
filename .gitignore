@@ -48,3 +48,6 @@ supabase/.temp
 # local mock/demo artifacts
 /data/*.local.json
 
+
+# Local ngrok policy with the real tunnel token (see deploy/ngrok-ollama.example.yaml)
+deploy/ngrok-ollama.yaml

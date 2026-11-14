@@ -9,7 +9,7 @@ export class OllamaProvider implements AIProvider {
   readonly name = "ollama";
 
   async embed(texts: string[]): Promise<number[][]> {
-    return embedWithOllama(config.ollama.baseUrl, config.ollama.embeddingModel, texts);
+    return embedWithOllama(config.ollama.baseUrl, config.ollama.embeddingModel, texts, config.ollama.authToken);
   }
 
   async generate(input: GenerateInput): Promise<GenerateResult> {
@@ -18,7 +18,8 @@ export class OllamaProvider implements AIProvider {
         config.ollama.baseUrl,
         config.ollama.chatModel,
         input.question,
-        input.context
+        input.context,
+        config.ollama.authToken
       );
     } catch (error) {
       logger.error("rag.generation_failed", {

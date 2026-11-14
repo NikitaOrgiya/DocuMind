@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, PowerOff } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useEffect } from "react";
 import type { ChatMessageRecord } from "@/types/domain";
@@ -28,7 +28,26 @@ export function ChatView({ sessionId: initialSessionId, initialMessages }: ChatV
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastQuestion, setLastQuestion] = useState<string | null>(null);
+  // null = not checked yet. The model may run on a computer that is
+  // switched off (public demo), so say so up front instead of letting the
+  // visitor find out from a failed question.
+  const [modelOnline, setModelOnline] = useState<boolean | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/model-status", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : { online: true }))
+      .then((data: { online?: boolean }) => {
+        if (!cancelled) setModelOnline(data.online !== false);
+      })
+      .catch(() => {
+        if (!cancelled) setModelOnline(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -49,8 +68,10 @@ export function ChatView({ sessionId: initialSessionId, initialMessages }: ChatV
 
       const data = await res.json();
       if (!res.ok) {
+        if (data.modelOffline) setModelOnline(false);
         throw new Error(data.error ?? "Не удалось сформировать ответ. Попробуйте ещё раз.");
       }
+      setModelOnline(true);
 
       const payload = data as ChatApiResponse;
       setMessages((prev) => [...prev, payload.userMessage, payload.assistantMessage]);
@@ -81,6 +102,18 @@ export function ChatView({ sessionId: initialSessionId, initialMessages }: ChatV
           </div>
         )}
       </div>
+
+      {modelOnline === false && !error && (
+        <div className="mx-auto w-full max-w-3xl px-4 pb-2">
+          <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <PowerOff className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>
+              Демо-модель сейчас офлайн: она работает на компьютере разработчика и включена не всегда.
+              Вопросы пока не обрабатываются, но базу знаний можно посмотреть.
+            </span>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 pb-2">

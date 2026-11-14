@@ -112,6 +112,8 @@ export const config = {
     baseUrl: process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434",
     chatModel: process.env.OLLAMA_CHAT_MODEL || "qwen3:4b",
     embeddingModel: process.env.OLLAMA_EMBEDDING_MODEL || "nomic-embed-text",
+    /** Bearer token for a tunnel in front of Ollama (public demo); empty for a local `ollama serve`. */
+    authToken: process.env.OLLAMA_AUTH_TOKEN ?? "",
   },
   openai: {
     apiKey: process.env.OPENAI_API_KEY ?? "",
