@@ -5,8 +5,9 @@ questions strictly from a curated, pre-indexed set of documents and shows
 exactly which passages it used — if the answer isn't in the knowledge base,
 it says so instead of guessing.
 
-This is a portfolio project. It is a local MVP: no production deployment,
-no public document upload, no admin panel. The document base is a fixed,
+This is a portfolio project. It is a local MVP with a temporary public
+demo (see [Public demo](#public-demo-temporary)): no public document
+upload, no admin panel. The document base is a fixed,
 five-document synthetic corpus checked into the repo.
 
 Three interchangeable providers, selected by one env var
@@ -302,6 +303,7 @@ See [.env.example](.env.example) for the full list with comments. Summary:
 | `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project URL/anon key — needed for `ollama`/`openai`. Local Supabase's URL is the plain API root (e.g. `http://127.0.0.1:54321`), **not** the `.../storage/v1/s3` endpoint `npx supabase status` also prints |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only — never sent to the browser |
 | `OLLAMA_BASE_URL` / `OLLAMA_CHAT_MODEL` / `OLLAMA_EMBEDDING_MODEL` | Ollama connection + model selection — no API key needed |
+| `OLLAMA_AUTH_TOKEN` | Public demo only: bearer token for the ngrok tunnel in front of Ollama (see [Public demo](#public-demo-temporary)) |
 | `OPENAI_API_KEY` | Server-only, only needed for `DOCUMIND_AI_PROVIDER=openai` |
 | `OPENAI_CHAT_MODEL` / `OPENAI_EMBEDDING_MODEL` | OpenAI model selection |
 | `RAG_MATCH_THRESHOLD` / `RAG_MATCH_COUNT` / `RAG_CONTEXT_MAX_CHARS` | RAG tuning, provider-aware defaults |
@@ -535,6 +537,59 @@ it never silently substitutes for a misconfigured real provider; see
   return pure noise), but this project makes no multilingual-support claim
   beyond this one measured data point — see [Known limitations](#known-limitations).
 
+## Public demo (temporary)
+
+A stop-gap way to show the real Ollama pipeline publicly without paying for
+a GPU server: the **app and database are in the cloud and always up**, the
+**model stays on the developer's computer** and is reached through an ngrok
+tunnel. When that computer is off, the app still opens; the chat says the
+demo model is offline instead of failing.
+
+```
+Visitor → Vercel (Next.js app) ──→ Supabase (pgvector, chat history)
+                     │
+                     └─ Bearer token ─→ ngrok tunnel ─→ Ollama on the developer's PC
+```
+
+What the code does for this mode:
+
+- `OLLAMA_AUTH_TOKEN` — sent as `Authorization: Bearer …` on every Ollama
+  call; the tunnel's traffic policy rejects anything without it, so the
+  model can't be used by strangers.
+- An unreachable model (connection refused, timeout, ngrok's
+  `ERR_NGROK_*` page, 502/503/504) raises `ModelUnavailableError`
+  ([lib/ai/errors.ts](src/lib/ai/errors.ts)); the chat API answers 503 with
+  a plain explanation, and `/api/model-status` drives an "offline" banner.
+  Ollama's own errors (e.g. model not found) are still reported as errors.
+- Chat history is scoped to an anonymous per-browser cookie
+  ([lib/visitor.ts](src/lib/visitor.ts), stored in `chat_sessions.user_id`),
+  so visitors never see each other's questions.
+- `/api/chat` limits each visitor to 8 questions per 10 minutes, all
+  visitors to 60 per hour, and runs one generation at a time per server
+  instance (see the "zombie generation" limitation below).
+
+### Setup
+
+1. **Database.** In the Supabase project's SQL editor run the three
+   migrations in `supabase/migrations/` in order. Then, on the computer
+   with Ollama, point `.env.local` at that project
+   (`NEXT_PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`,
+   `DOCUMIND_AI_PROVIDER=ollama`) and run `npm run ingest` once.
+2. **Tunnel** (on the computer with Ollama). Create a free ngrok account,
+   then `ngrok config add-authtoken <AUTHTOKEN>`. Copy
+   `deploy/ngrok-ollama.example.yaml` to `deploy/ngrok-ollama.yaml` and put
+   a long random token in it. Start it with
+   `ngrok http 11434 --traffic-policy-file deploy/ngrok-ollama.yaml`. The
+   free plan's dev domain (`https://<name>.ngrok-free.dev`) stays the same
+   between restarts.
+3. **App.** Import the repository into Vercel and set:
+   `DOCUMIND_AI_PROVIDER=ollama`, `OLLAMA_BASE_URL=https://<name>.ngrok-free.dev`,
+   `OLLAMA_AUTH_TOKEN=<the same token>`, `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`,
+   `NEXT_PUBLIC_SITE_URL=<the Vercel URL>`.
+
+To take the demo model online: start Ollama, then the ngrok command above.
+
 ## Known limitations
 
 **Critical before a portfolio demo:**
@@ -549,7 +604,7 @@ it never silently substitutes for a misconfigured real provider; see
 - Chat history in mock mode is in-memory only (unchanged — real modes persist to Supabase, verified).
 
 **Production-only (intentionally out of scope for this MVP):**
-- Public document upload, an admin/document-management panel, authentication/multi-tenant auth, deployment, and monitoring.
+- Public document upload, an admin/document-management panel, authentication/multi-tenant auth, and monitoring. Deployment exists only as the temporary [public demo](#public-demo-temporary).
 
 ## Next steps
 

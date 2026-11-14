@@ -42,11 +42,11 @@ function toMessage(row: MessageRow): ChatMessageRecord {
 export class SupabaseChatStore implements ChatStore {
   readonly name = "supabase";
 
-  async createSession(firstQuestion: string): Promise<ChatSessionRecord> {
+  async createSession(firstQuestion: string, ownerId: string): Promise<ChatSessionRecord> {
     const client = getSupabaseServerClient();
     const { data, error } = await client
       .from("chat_sessions")
-      .insert({ title: titleFromQuestion(firstQuestion) })
+      .insert({ title: titleFromQuestion(firstQuestion), user_id: ownerId })
       .select()
       .single();
 
@@ -56,12 +56,13 @@ export class SupabaseChatStore implements ChatStore {
     return toSession(data as SessionRow);
   }
 
-  async getSession(id: string): Promise<ChatSessionWithMessages | null> {
+  async getSession(id: string, ownerId: string): Promise<ChatSessionWithMessages | null> {
     const client = getSupabaseServerClient();
     const { data: sessionRow, error: sessionError } = await client
       .from("chat_sessions")
       .select()
       .eq("id", id)
+      .eq("user_id", ownerId)
       .maybeSingle();
 
     if (sessionError) throw new Error(`Failed to load session: ${sessionError.message}`);
@@ -81,12 +82,14 @@ export class SupabaseChatStore implements ChatStore {
     };
   }
 
-  async listSessions(): Promise<ChatSessionRecord[]> {
+  async listSessions(ownerId: string): Promise<ChatSessionRecord[]> {
     const client = getSupabaseServerClient();
     const { data, error } = await client
       .from("chat_sessions")
       .select()
-      .order("updated_at", { ascending: false });
+      .eq("user_id", ownerId)
+      .order("updated_at", { ascending: false })
+      .limit(50);
 
     if (error) throw new Error(`Failed to list sessions: ${error.message}`);
     return ((data ?? []) as SessionRow[]).map(toSession);
